@@ -1,0 +1,89 @@
+<I> ::= #<S><T>
+<S> ::= a<A>
+<S> ::= b<B>
+<S> ::= a<S><A>
+<S> ::= b<S><B>
+<A> ::= a
+<B> ::= b
+<T> ::= #
+
+#asaabbaaba#
+#abaabbaaba#
+#aa#
+
+<I> ::= #<A><Z>
+<A> ::= V
+<A> ::= V<Y1>
+<A> ::= V<Y2>
+<A> ::= V<Y1><Y2>
+<A> ::= +<T>
+<A> ::= -<T>
+<A> ::= +<T><Y2>
+<A> ::= -<T><Y2>
+<A> ::= (<A><Q>
+<A> ::= (<A><Q><Y1>
+<A> ::= (<A><Q><Y2>
+<A> ::= (<A><Q><Y1><Y2>
+<Q> ::= )
+<F> ::= V
+<F> ::= (<A><Q>
+<T> ::= V
+<T> ::= (<A><Q>
+<T> ::= V<Y1>
+<T> ::= (<A><Q><Y1>
+<Y1> ::= *<F>
+<Y1> ::= /<F>
+<Y1> ::= *<F><Y1>
+<Y1> ::= /<F><Y1>
+<Y2> ::= +<T>
+<Y2> ::= -<T>
+<Y2> ::= +<T><Y2>
+<Y2> ::= -<T><Y2>
+<Z> ::= #
+
+#V*V-V#
+#(((V+V-V*V/V)))#
+#((V+V/V))+((V-V*V))#
+#(V+((V*))#
+#((V+V*V)*V+V)#
+
+<I> ::= #<S><Z>
+<S> ::= b<P><V><P><E>
+<P> ::= A<J><N>
+<P> ::= A<N>
+<P> ::= THE<J><N>
+<P> ::= THE<N>
+<P> ::= A<J><N>
+<P> ::= A<N>
+<P> ::= THE<J><N>
+<P> ::= THE<N>
+<V> ::= b<W><B>
+<V> ::= b<W><B><D><B>
+<E> ::= .
+<J> ::= b<R>
+<J> ::= b<R><C><J>
+<N> ::= b<Q>
+<W> ::= FLEW
+<W> ::= SPIRALED
+<W> ::= FLUTTERED
+<B> ::= b
+<R> ::= LITTLE
+<R> ::= BLUE
+<R> ::= BRAVE
+<R> ::= GRAVEFUL
+<R> ::= STUBBORN
+<C> ::= ,
+<Q> ::= BIRD
+<Q> ::= WITCH
+<Q> ::= BUTTERFLY
+<D> ::= PAST
+<D> ::= AROUND
+<D> ::= BESIDE
+<Z> ::= #
+
+#bAbBRAVEbBUTTERFLYbFLEWbPASTbTHEbBIRD#
+#bTHEbLITTLE,bBLUEbWITCHbSPIRALEDbPASTbTHEbBEE.#
+#bAbBLUEbBIRDbFLUTTEREDbBESIDEbTHEbWITCH.#
+#bTHEbBIRDbFLEWbTHEbBIRD.#
+#bTHEbBIRDbSPIRALEDbAROUNDbTHEbBUTTERFLY.#
+
