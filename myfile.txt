@@ -1,0 +1,13 @@
+program basicsExample;
+	begin
+        /*
+		num X = 3;
+		write "ae.txt:";
+		num result = X ^ 3;
+		write result;
+        */
+
+		result = 3 + ( 5 - 4 ) * 2;
+		write result;
+
+end.
