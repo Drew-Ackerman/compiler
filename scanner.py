@@ -1,3 +1,0 @@
-
-# Look for delimeters ' ' ; = + ^ -
-

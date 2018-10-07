@@ -1,0 +1,60 @@
+program basicsExample;
+	begin
+        /*
+		num X = 3;
+		write "ae.txt:";
+		num result = X ^ 3;
+		write result;
+        */
+
+		/*num X = 3;
+		num Y = 4;
+		num Z = 5;
+		num result = X * Y * Z;
+		write "ae.txt:";
+		write result;
+		result = 3 ^ X + (67 - 34) - 77 * 2 ^ X;
+		write result;
+		result = 3 ^ Y + (67 - 34) - 77 * 2 ^ Y;
+		write result;
+		result = 3 ^ Y + (67 - 34) - 77 * 2 ^ Y * -1;
+		write result;
+        */
+
+        num bob = 0;
+        num i;
+        num j;
+        num ralph = 3;
+        num num3 = 1;
+        num x = 2;
+
+
+        for i = bob to ralph step num3 do
+		{
+			x = x * 2;
+		}
+		write "x should be 32:";
+		write x;
+
+		x = 0;
+		for i = 0 to 100 step 5 do {
+			x = x + 1;
+		}
+		write "x should be 21:";
+		write x;
+
+		write "Loop 3 & 4";
+
+		for i = bob to ralph step num3 do {
+			for j = 0 to 100 step 5 do {
+				x = ( 2 + x );
+			}
+		}
+		write "ending i";
+		write i;
+
+		write "x should be 189:";
+		write x;
+        write "Done";
+
+end.
