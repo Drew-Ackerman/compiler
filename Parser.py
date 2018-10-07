@@ -3,6 +3,15 @@ from collections import deque
 from Scanner import TokenTypes
 from Array import Array
 import Algorithmic
+import IO
+import For
+
+
+def get_generated_num():
+    n = 0
+    while True:
+        yield n
+        n += 2
 
 class Parser(object):
 
@@ -14,19 +23,19 @@ class Parser(object):
         self.asm_string = []
         self.number_variable_counter = 0
         self.initialized_variables = []
-        self.uninitialized_variables = Uninitialized_Variables()
         self.end_of_tokens = False
         self.algorithmic_stack = []
 
-    def get_string_var_num(self):
-        n = 0
-        while True:
-            yield n
-            n += 2
+        self.for_loop_counter = 0
+
+    even_number_generator = get_generated_num()
+
 
     def parse(self):
         self.parse_header()
-        self.statement()
+
+        while not self.end_of_tokens:
+            self.statement()
 
     def parse_header(self):
         if self.get_next_token().token_str != 'program':
@@ -49,7 +58,6 @@ class Parser(object):
 
     def statement(self):
 
-        while not self.end_of_tokens:
             next_token = self.get_next_token()
 
             if next_token.token_type == TokenTypes.KEYWORD:
@@ -61,98 +69,72 @@ class Parser(object):
                     self.end()
                 elif next_token.token_str == "array":
                     self.array()
+                elif next_token.token_str == "read":
+                    self.read()
+                elif next_token.token_str == "for":
+                    self.for_loop()
 
             elif next_token.token_type == TokenTypes.DELIMETER:
                 if next_token.token_str == ";":
-                    continue
+                    return
 
             elif next_token.token_type == TokenTypes.VARIABLE:
                 if next_token.token_str == "end.":
                     self.end()
-                    return
-                self.variable(next_token)
-
-    def write(self):
-        token_to_write = self.get_next_token()
-
-        if token_to_write.token_type == TokenTypes.ALPHANUM:
-            self.symbol_table.insert(token_to_write.token_str, token_to_write)
-            string_var_number = self.get_string_var_num()
-            string_var_number = next(string_var_number)
-            self.initialized_variables.append((token_to_write.token_str, "s{}".format(string_var_number)))
-            self.asm_string.append("push s{}".format(string_var_number))
-            self.asm_string.append("push stringPrinter")
-            self.asm_string.append("call _printf")
-            self.asm_string.append("add esp, 0x08")
-
-        else:
-            variable = self.symbol_table.lookup(token_to_write.token_str)
-
-            if isinstance(variable, Array):
-                self.write_array(token_to_write.token_str)
-                return
-
-            if token_to_write.token_type == TokenTypes.VARIABLE:
-                self.asm_string.append("push DWORD[{}]".format(token_to_write.token_str))
-            elif token_to_write.token_type == TokenTypes.NUM:
-                self.asm_string.append("push {}".format(token_to_write.token_str))
-            self.asm_string.append("push numberPrinter")
-            self.asm_string.append("call _printf")
-            self.asm_string.append("add esp, 0x08")
+                else:
+                    self.variable(next_token)
             return
 
-    def write_array(self, variable_name):
+    def for_loop(self):
+        loop_counter = self.for_loop_counter
+        self.for_loop_counter += 1
+        for_class = For.For(self.asm_string, self.tokens, self.symbol_table)
+        for_class.create_start(loop_counter)
 
-        variable = self.symbol_table.lookup(variable_name)
 
-        in_array_statement = True
-        list_of_indicies = []
+        assert self.get_next_token().token_str == "{"
 
-        if self.get_next_token().token_str == '[':
-            while in_array_statement:
-                array_statement_token = self.get_next_token()
+        while self.lookahead_token.token_str != "}":
+            self.statement()
 
-                if array_statement_token.token_type is TokenTypes.NUM:
-                    list_of_indicies.append(array_statement_token.token_str)
-                if array_statement_token.token_str == ']':
-                    in_array_statement = False
+        assert self.get_next_token().token_str == "}"
 
-        self.asm_string.append('xor edi, edi')
+        loop_counter = self.for_loop_counter
+        self.for_loop_counter += 1
+        for_class.create_end(loop_counter)
 
-        for delta, index in zip(variable.mapping_values, list_of_indicies):
-            self.asm_string.append('mov esi, {}'.format(delta))
-            self.asm_string.append('imul esi, {}'.format(index))
-            self.asm_string.append('add edi, esi')
+        return
 
-        self.asm_string.append('sub edi, {}'.format(variable.relocation_factor))
-        self.asm_string.append('imul edi, 4')
-        self.asm_string.append('add edi, {}'.format(variable_name))
-        self.asm_string.append('push DWORD[edi]')
-        self.asm_string.append('push numberPrinter')
-        self.asm_string.append('call _printf')
-        self.asm_string.append('add esp, 0x08')
-        self.asm_string.append('\n')
+    def read(self):
+        io = IO.IO(self.asm_string, self.symbol_table, self.tokens)
+        io.read()
+
+    def write(self):
+        io = IO.IO(self.asm_string, self.symbol_table, self.tokens)
+        io.write()
 
     def variable(self, variable_name):
         try:
-            variable = self.symbol_table.lookup(variable_name.token_str)
+            symbol = self.symbol_table.lookup(variable_name.token_str)
         except ValueError:
             raise ValueError("Variable: {}, has not been defined yet".format(variable_name))
 
-        if isinstance(variable, Array):
-            self.array_assignment(variable, variable_name)
+        if isinstance(symbol.value, Array):
+            self.array_assignment(symbol, variable_name)
             return
 
         token = self.get_next_token()
 
         if token.token_str == "=":
-            self.variable_assignment(variable)
+            self.variable_assignment(symbol)
 
-    def array_assignment(self, variable, variable_name):
+    def array_assignment(self, symbol, variable_name):
 
         in_array_statement = True
         list_of_indicies = []
         value_to_assign = None
+
+        array = symbol.value
 
         if self.get_next_token().token_str == '[':
             while in_array_statement:
@@ -165,15 +147,17 @@ class Parser(object):
 
         if self.get_next_token().token_str == '=':
             value_to_assign = self.get_next_token()
+        else:
+            raise ValueError("There needs to be an equal sign for assignment.")
 
         self.asm_string.append('xor edi, edi')
 
-        for delta, index in zip(variable.mapping_values, list_of_indicies):
+        for delta, index in zip(array.mapping_values, list_of_indicies):
             self.asm_string.append('mov esi, {}'.format(delta))
             self.asm_string.append('imul esi, {}'.format(index))
             self.asm_string.append('add edi, esi')
 
-        self.asm_string.append('sub edi, {}'.format(variable.relocation_factor))
+        self.asm_string.append('sub edi, {}'.format(array.relocation_factor))
         self.asm_string.append('imul edi, 4')
         self.asm_string.append('add edi, {}'.format(variable_name.token_str))
 
@@ -184,20 +168,16 @@ class Parser(object):
         token = self.get_next_token()
 
         if token.token_type == TokenTypes.VARIABLE:
-            self.symbol_table.insert(token.token_str, token)
+            new_symbol = SymbolTable.Symbol(token.token_str, None, token.token_type, SymbolTable.SymbolTypes.UNKNOWN)
+            self.symbol_table.insert(new_symbol)
         else:
             raise TypeError("Varible token expected, got {} instead".format(token))
 
-        next_token = self.get_next_token()
-        if next_token.token_str == ";":
-            self.uninitialized_variables.append(token)
-            return
+        if self.lookahead_token.token_str == "=":
+            self.get_next_token() # Clear out the "=" token
+            self.variable_assignment(self.symbol_table.lookup(token.token_str))
 
-        elif next_token.token_str == "=":
-            self.variable_assignment(token)
-
-    def variable_assignment(self, variable):
-        self.uninitialized_variables.append(variable.token_str)
+    def variable_assignment(self, symbol):
         expression = []
         token = self.get_next_token()
         while token.token_str != ";":
@@ -206,18 +186,18 @@ class Parser(object):
 
         algorithmic_class = Algorithmic.Algorithmic(self.asm_string, self.symbol_table, expression)
         algorithmic_class.infix_to_postfix()
-        algorithmic_class.process_postfix()
+        algorithmic_class.process_postfix(symbol)
 
-        self.asm_string.append("mov esi, DWORD[temp_0]")
-        self.asm_string.append("mov DWORD[{}], esi".format(variable.token_str))
+        # self.asm_string.append("mov esi, DWORD[temp_0]")
+        # self.asm_string.append("mov DWORD[{}], esi".format(symbol.name))
 
     def array(self):
         # This is for creating an array
-        array_variable_name = self.get_next_token()
+        array_variable = self.get_next_token()
 
         array_size_deque = deque()
         in_array_statement = True
-        if array_variable_name.token_type is TokenTypes.VARIABLE:
+        if array_variable.token_type is TokenTypes.VARIABLE:
 
             if self.get_next_token().token_str == '[':
                 while in_array_statement:
@@ -230,7 +210,7 @@ class Parser(object):
                     if array_statement_token.token_str == ']':
                         in_array_statement = False
 
-        array = self._create_array(array_variable_name, array_size_deque)
+        array = self._create_array(array_variable.token_str, array_size_deque)
 
     def _create_array(self, array_variable_name, array_size_deque):
         lower_bounds = []
@@ -243,9 +223,8 @@ class Parser(object):
 
         new_array = Array(lower_bounds, upper_bounds)
         new_array.create_array()
-
-        self.uninitialized_variables.append(array_variable_name.token_str, new_array.array_size)
-        self.symbol_table.insert(array_variable_name.token_str, new_array)
+        new_array_symbol = SymbolTable.Symbol(array_variable_name, new_array, TokenTypes.ARRAY, SymbolTable.SymbolTypes.KNOWN)
+        self.symbol_table.insert(new_array_symbol)
 
         return new_array
 
@@ -274,6 +253,8 @@ class Parser(object):
         self.asm_file.write("\n")
         self.asm_file.write("extern _printf")
         self.asm_file.write("\n")
+        self.asm_file.write("extern _scanf")
+        self.asm_file.write("\n")
         self.asm_file.write("extern _ExitProcess@4")
         self.asm_file.write("\n")
 
@@ -283,28 +264,28 @@ class Parser(object):
         self.asm_file.write("\n")
         self.asm_file.write("\n")
 
-        for init_var, init_value in self.initialized_variables:
-            if init_value.isnumeric():
-                s = "{} dd {}".format(init_var, init_value)
+        for symbol_name, symbol in self.symbol_table.symbol_table.items():
+            if symbol.data_type is SymbolTable.DataTypes.STRING:
+                s = "{} db {},0x0d,0x0a,0".format(symbol_name, symbol.value)
                 self.asm_file.write(s)
                 self.asm_file.write("\n")
-            elif init_value[0].isalpha():
-                s = "{} db {},0x0d,0x0a,0".format(init_value, init_var)
-                self.asm_file.write(s)
-                self.asm_file.write("\n")
+
         self.asm_file.write("stringPrinter db \"%s\",0")
         self.asm_file.write("\n")
         self.asm_file.write("numberPrinter db \"%d\",0x0d,0x0a,0")
+        self.asm_file.write("\n")
+        self.asm_file.write("int_format db \"%i\", 0")
         self.asm_file.write("\n")
 
     def create_uninitialized(self):
         self.asm_file.write("\n")
         self.asm_file.write("section .bss USE32")
         self.asm_file.write("\n")
-        for variable, size in set(self.uninitialized_variables.vars_list):
-            s = "{} resd {}".format(variable, size)
-            self.asm_file.write(s)
-            self.asm_file.write("\n")
+        for symbol_name, symbol in self.symbol_table.symbol_table.items():
+            if symbol.data_type is not SymbolTable.DataTypes.STRING:
+                s = "{} resd {}".format(symbol_name, symbol.size)
+                self.asm_file.write(s)
+                self.asm_file.write("\n")
 
     def print_asm_string(self):
         self.asm_file.write("\n")
@@ -333,14 +314,3 @@ class Parser(object):
         except IndexError:
             self.end_of_tokens = True
         return next_token
-
-class Uninitialized_Variables(object):
-
-    def __init__(self):
-        self.vars_list = [("temp_0",1)]
-
-    def append(self, var_name, size=1):
-        self.vars_list.append((var_name, size))
-
-    def remove(self, var_name):
-        self.vars_list.remove(var_name)

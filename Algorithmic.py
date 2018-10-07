@@ -2,6 +2,7 @@
 from Scanner import  TokenTypes
 import collections
 from Scanner import Token
+import SymbolTable
 
 def label_number_generator():
     n = 0
@@ -69,23 +70,31 @@ class Algorithmic(object):
             if token.token_type in token_types:
                 return self.expression[index]
 
-    def process_postfix(self):
-        #self.setup_temp()
-
-        while len(self.expression) > 1:
-            self._process_postfix(self.expression)
-
-    def setup_temp(self):
-        token_to_assign = self.get_from_expression(TokenTypes.VARIABLE, TokenTypes.NUM)
-        if token_to_assign.token_type == TokenTypes.VARIABLE:
-            self.asm_string.append("mov esi, DWORD[{}];".format(token_to_assign.token_str))
-            self.asm_string.append("mov DWORD[temp_0], esi;".format(token_to_assign.token_str))
+    def process_postfix(self, variable):
+        if len(self.expression) > 1:
+            while len(self.expression) > 1:
+                self._process_postfix(self.expression)
+            self.asm_string.append("mov DWORD[{}], esi".format(variable.name))
         else:
-            self.asm_string.append("mov DWORD[temp_0], {};".format(token_to_assign.token_str))
+            self.assign_value(variable)
+
+    def assign_value(self, variable):
+        token = self.expression.pop()
+
+        symbol = self.symbol_table.lookup(variable.name)
+        symbol.value = token.token_str
+        self.symbol_table.update(symbol.name, symbol)
+
+        if token.token_type is TokenTypes.NUM:
+            self.asm_string.append("mov DWORD[{}], {}".format(symbol.name, symbol.value))
+
+        elif token.token_type is TokenTypes.VARIABLE:
+            if symbol.data_type in [SymbolTable.DataTypes.NUM]:
+                self.asm_string.append("mov DWORD[{}], {}".format(symbol.name, symbol.value))
+
 
     def _process_postfix(self, expression):
 
-        #operand = self.get_from_expression(TokenTypes.NUM, TokenTypes.VARIABLE)
         operator = self.get_from_expression(TokenTypes.ALGORITHMIC)
         operator_index = expression.index(operator)
         self.expression.pop(operator_index)
@@ -114,23 +123,43 @@ class Algorithmic(object):
 
     def add(self, opl, opr):
 
-        if opl.token_type == TokenTypes.VARIABLE:
-            self.asm_string.append("mov edi, DWORD[{}];".format(opl.token_str))
+        # if opl.token_type == TokenTypes.VARIABLE:
+        #     self.asm_string.append("mov edi, DWORD[{}];".format(opl.token_str))
+        # else:
+        #     self.asm_string.append("mov edi, {};".format(opl.token_str))
+        #
+        # if opr.token_type == TokenTypes.VARIABLE:
+        #     self.asm_string.append("add edi, DWORD[{}];".format(opr.token_str))
+        # else:
+        #     self.asm_string.append("add edi, {};".format(opr.token_str))
+        #
+        # self.asm_string.append("mov DWORD[temp_0], edi;")
+        #
+        # new_num_value = str(int(opl.token_str) + int(opr.token_str))
+        # new_token = Token(TokenTypes.NUM)
+        # new_token.token_str = new_num_value
+        # return new_token
+
+        try:
+            opl_symbol = self.symbol_table.lookup(opl.token_str)
+        except ValueError:
+            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, None)
+
+        try:
+            opr_symbol = self.symbol_table.lookup(opr.token_str)
+        except ValueError:
+            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, None)
+
+        if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
+                self.asm_string.append("mov esi, DWORD[{}];".format(opl.token_str))
         else:
-            self.asm_string.append("mov edi, {};".format(opl.token_str))
+            self.asm_string.append("mov esi, {};".format(opl.token_str))
 
-        if opr.token_type == TokenTypes.VARIABLE:
-            self.asm_string.append("add edi, DWORD[{}];".format(opr.token_str))
+
+        if opr_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
+                self.asm_string.append("add esi, DWORD[{}];".format(opr_symbol.name))
         else:
-            self.asm_string.append("add edi, {};".format(opr.token_str))
-
-        self.asm_string.append("mov DWORD[temp_0], edi;")
-
-        new_num_value = str(int(opl.token_str) + int(opr.token_str))
-        new_token = Token(TokenTypes.NUM)
-        new_token.token_str = new_num_value
-        return new_token
-
+            self.asm_string.append("add esi, {};".format(opr.token_str))
 
     def sub(self, opl, opr):
 
@@ -154,23 +183,32 @@ class Algorithmic(object):
 
     def mult(self, opl, opr):
 
-        if opl.token_type == TokenTypes.VARIABLE:
-            self.asm_string.append("mov edi, DWORD[{}];".format(opl.token_str))
+        try:
+            opl_symbol = self.symbol_table.lookup(opl.token_str)
+        except ValueError:
+            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, None)
+
+        try:
+            opr_symbol = self.symbol_table.lookup(opr.token_str)
+        except ValueError:
+            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, None)
+
+        if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
+                self.asm_string.append("mov esi, DWORD[{}];".format(opl.token_str))
         else:
-            self.asm_string.append("mov edi, {};".format(opl.token_str))
+            self.asm_string.append("mov esi, {};".format(opl.token_str))
 
-        if opr.token_type == TokenTypes.VARIABLE:
-            self.asm_string.append("imul edi, DWORD[{}];".format(opr.token_str))
+
+        if opr_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
+                self.asm_string.append("imul esi, DWORD[{}];".format(opr_symbol.name))
         else:
-            self.asm_string.append("imul edi, {};".format(opr.token_str))
+            self.asm_string.append("imul esi, {};".format(opr.token_str))
 
-        self.asm_string.append("mov DWORD[temp_0], edi;")
-
-        if opl.token_type is TokenTypes.VARIABLE:
-            opl = self.symbol_table.lookup(opl).token_str
+        #self.asm_string.append("mov DWORD[temp_0], edi;")
 
 
-        new_num_value = str(int(opl.token_str) * int(opr.token_str))
+
+        new_num_value = str(int(opl_symbol.value) * int(opr_symbol.value))
         new_token = Token(TokenTypes.NUM)
         new_token.token_str = new_num_value
         return new_token

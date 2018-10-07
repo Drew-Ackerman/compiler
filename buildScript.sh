@@ -3,3 +3,4 @@
 ./link.exe /OUT:basicsExample.exe msvcrtd.lib basicsExample.obj
 ./basicsExample.exe
 sleep 12
+exit 0

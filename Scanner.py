@@ -1,6 +1,7 @@
 from collections import deque
 import enum
 import re
+import SymbolTable
 
 class Scanner(object):
 
@@ -12,6 +13,7 @@ class Scanner(object):
     def tokenize(self):
         with open(self.file_to_parse) as f:
 
+            in_string = False
             in_inline_comment = False
             in_block_comment = False
             end_of_file = False
@@ -85,12 +87,16 @@ class Scanner(object):
 
                     elif char == "\"":
                         self.current_token.token_str += char
+                        in_string = not in_string
 
                     # If space is found
                     elif char in [' ']:
-                        if self.current_token.token_str != '':
-                            self.tokens.append(self.current_token)
-                            self.current_token = Token(None)
+                        if in_string:
+                            self.current_token.token_str += char
+                        else:
+                            if self.current_token.token_str != '':
+                                self.tokens.append(self.current_token)
+                                self.current_token = Token(None)
 
                     elif char in ['.']:
                         if self.current_token.token_type is TokenTypes.ALPHANUM:
@@ -99,7 +105,7 @@ class Scanner(object):
                             self.tokens.append(self.current_token)
                             self.current_token = Token(None)
 
-                    elif char in [',',';','[', ']', '(', ')']:
+                    elif char in [',',';','[', ']', '(', ')' , '{', '}']:
                         self.tokens.append(self.current_token)
                         self.current_token = Token(None)
 
@@ -128,8 +134,9 @@ class Scanner(object):
 
     def assign_types(self):
 
-        regexKW = r'(program|begin|end|write|read|num|array)$'
+        regexKW = r'(program|begin|end|write|read|num|array|for|to|step|do)$'
         regexVariable = r'([a-zA-Z_][a-zA-Z_$0-9]*)'
+        regexString = r'(^").*("$)'
 
         for token in self.tokens:
 
@@ -139,6 +146,9 @@ class Scanner(object):
             elif re.match(regexVariable, token.token_str):
                 token.token_type = TokenTypes.VARIABLE
 
+            elif re.match(regexString, token.token_str):
+                token.token_type = TokenTypes.STRING
+
 class TokenTypes(enum.Enum):
     ALPHANUM = "alphanumeric"
     KEYWORD = "keyword"
@@ -146,6 +156,8 @@ class TokenTypes(enum.Enum):
     DELIMETER = "delimeter"
     ALGORITHMIC = "algo"
     VARIABLE = "variable"
+    ARRAY = "array"
+    STRING = "string"
 
 
 class Token(object):
