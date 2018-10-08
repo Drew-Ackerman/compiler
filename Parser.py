@@ -5,6 +5,7 @@ from Array import Array
 import Algorithmic
 import IO
 import For
+import If
 
 
 def get_generated_num():
@@ -73,6 +74,8 @@ class Parser(object):
                     self.read()
                 elif next_token.token_str == "for":
                     self.for_loop()
+                elif next_token.token_str == "if":
+                    self.if_statement()
 
             elif next_token.token_type == TokenTypes.DELIMETER:
                 if next_token.token_str == ";":
@@ -84,6 +87,21 @@ class Parser(object):
                 else:
                     self.variable(next_token)
             return
+
+    def if_statement(self):
+        if_statement = If.If(self.asm_string, self.tokens, self.symbol_table)
+
+        if_statement.create_start()
+
+        assert self.get_next_token().token_str == "then"
+        assert self.get_next_token().token_str == "{"
+
+        while self.lookahead_token.token_str != "}":
+            self.statement()
+
+        assert self.get_next_token().token_str == "}"
+
+        if_statement.create_end()
 
     def for_loop(self):
         loop_counter = self.for_loop_counter

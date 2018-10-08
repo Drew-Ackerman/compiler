@@ -114,12 +114,12 @@ class Scanner(object):
                         self.tokens.append(delimeter_token)
 
                     elif char in ['=', '+', '^', '-', '*']:
-                        if self.current_token.token_str != '':
-                            self.tokens.append(self.current_token)
+                        self.current_token.token_str += char
+                        self.current_token.token_type = TokenTypes.ALGORITHMIC
 
-                        algo_token = Token(TokenTypes.ALGORITHMIC)
-                        algo_token.token_str += char
-                        self.tokens.append(algo_token)
+                    elif char in ['!', '>', '<']:
+                        self.current_token.token_str += char
+                        self.current_token.token_type = TokenTypes.RELATIONAL
 
         self.tokens.append(self.current_token)
         self.assign_types()
@@ -134,9 +134,12 @@ class Scanner(object):
 
     def assign_types(self):
 
-        regexKW = r'(program|begin|end|write|read|num|array|for|to|step|do)$'
+        regexKW = r'(program|begin|end|write|read|num|array|for|to|step|do|if|then)$'
         regexVariable = r'([a-zA-Z_][a-zA-Z_$0-9]*)'
         regexString = r'(^").*("$)'
+        regexRelationalOperators = r'(!=|==|>|<|>=|<=)'
+        regexAlgorithmic = r'[\=\+\^\-\*]'
+
 
         for token in self.tokens:
 
@@ -149,6 +152,15 @@ class Scanner(object):
             elif re.match(regexString, token.token_str):
                 token.token_type = TokenTypes.STRING
 
+            elif re.match(regexAlgorithmic, token.token_str):
+                token.token_type = TokenTypes.ALGORITHMIC
+
+            elif re.match(regexRelationalOperators, token.token_str):
+                token.token_type = TokenTypes.RELATIONAL
+
+            else:
+                pass
+
 class TokenTypes(enum.Enum):
     ALPHANUM = "alphanumeric"
     KEYWORD = "keyword"
@@ -158,6 +170,7 @@ class TokenTypes(enum.Enum):
     VARIABLE = "variable"
     ARRAY = "array"
     STRING = "string"
+    RELATIONAL = "relational"
 
 
 class Token(object):
@@ -167,4 +180,4 @@ class Token(object):
         self.token_type = token_type
 
     def __repr__(self):
-        return "Token Str: {}, Token Type: {}".format(self.token_str, self.token_type)
+        return "Token Str -> {} :: Token Type-> {}".format(self.token_str, self.token_type)

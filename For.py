@@ -103,7 +103,3 @@ class For(object):
             return "ecx"
         elif counter % mod_var == 3:
             return "edx"
-        # elif counter % mod_var == 4:
-        #     return "esp"
-        # elif counter % mod_var == 5:
-        #     return "ebp"
