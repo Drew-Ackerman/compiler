@@ -1,7 +1,6 @@
 from collections import deque
 import enum
 import re
-import SymbolTable
 
 class Scanner(object):
 
@@ -105,7 +104,7 @@ class Scanner(object):
                             self.tokens.append(self.current_token)
                             self.current_token = Token(None)
 
-                    elif char in [',',';','[', ']', '(', ')' , '{', '}']:
+                    elif char in [',',';','[', ']', '(', ')' , '{', '}', ':']:
                         self.tokens.append(self.current_token)
                         self.current_token = Token(None)
 
@@ -134,7 +133,7 @@ class Scanner(object):
 
     def assign_types(self):
 
-        regexKW = r'(program|begin|end|write|read|num|array|for|to|step|do|if|then)$'
+        regexKW = r'(program|begin|end.|write|read|num|array|for|to|step|do|if|then|case|switch|default)$'
         regexVariable = r'([a-zA-Z_][a-zA-Z_$0-9]*)'
         regexString = r'(^").*("$)'
         regexRelationalOperators = r'(!=|==|>|<|>=|<=)'

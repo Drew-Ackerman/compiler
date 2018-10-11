@@ -65,25 +65,17 @@ class If(object):
         return
 
     def create_end(self):
-        if self.lookahead_token.token_str == "else":
-            pass
+        if self.tokens[0].token_str == "else":
+            self.asm_string.append("jmp _endelse_{}".format(self.even_number_for_labels))
 
         self.asm_string.append("_endif_{}:".format(self.even_number_for_labels))
         return
 
-class Else(object):
+    def create_else_start(self):
+        self.get_next_token()
+        assert self.get_next_token().token_str == "{"
 
-    def __init__(self, asm_string, tokens, symbol_table):
-        self.asm_string = asm_string
-        self.tokens = tokens
-        self.symbol_table = symbol_table
-
-        self.even_number_for_labels = next(even_number_generator)
-
-    def get_next_token(self):
-        next_token = self.tokens.popleft()
-        try:
-            self.lookahead_token = self.tokens[0]
-        except IndexError:
-            self.end_of_tokens = True
-        return next_token
+    def create_else_end(self):
+        assert self.get_next_token().token_str == ";"
+        assert self.get_next_token().token_str == "}"
+        self.asm_string.append("_endelse_{}:".format(self.even_number_for_labels))

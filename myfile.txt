@@ -1,15 +1,33 @@
 program basicsExample;
 	begin
 
-        num bob1 = 3;
-		num bob2 = 5;
-		if bob1 != bob2 then //NOTE: the relational operators are: !=, ==, >, <, >=, <=
-		{
-			if 5 >= 6 then
-			{
-				write "5 >= 6";
-			}
-			write "bob1 != bob2";
-		}
+    /*
+    num num1 = 1;
+    num num2 = 2;
+    num num3 = 3;
+
+    read num4;
+    num num5 = num1 + num2 + num3 + num4 + num1 + num2;
+
+    write num5;
+    */
+
+    num bob = 2;
+    switch (bob)
+    {
+        case 1:
+        {
+            write "this is 1";
+        }
+        case 2:
+        {
+            write "this is 2";
+        }
+        default:
+        {
+            write "this is default";
+        }
+    }
+    write "this is after the switch";
 
 end.

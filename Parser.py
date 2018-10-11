@@ -64,8 +64,10 @@ class Parser(object):
             if next_token.token_type == TokenTypes.KEYWORD:
                 if next_token.token_str == "num":
                     self.num()
+                    assert self.get_next_token().token_str == ";"
                 elif next_token.token_str == "write":
                     self.write()
+                    assert self.get_next_token().token_str == ";"
                 elif next_token.token_str == "end.":
                     self.end()
                 elif next_token.token_str == "array":
@@ -76,17 +78,61 @@ class Parser(object):
                     self.for_loop()
                 elif next_token.token_str == "if":
                     self.if_statement()
+                elif next_token.token_str == "switch":
+                    self.switch_statement()
+
 
             elif next_token.token_type == TokenTypes.DELIMETER:
                 if next_token.token_str == ";":
                     return
 
             elif next_token.token_type == TokenTypes.VARIABLE:
-                if next_token.token_str == "end.":
-                    self.end()
-                else:
                     self.variable(next_token)
-            return
+
+    def switch_statement(self):
+        assert self.get_next_token().token_str == "("
+        switch_value = self.get_next_token()
+        self.asm_string.append("mov edi, DWORD[{}]".format(switch_value.token_str)) # Setup value of switch case into edi
+
+        assert self.get_next_token().token_str == ")"
+        assert self.get_next_token().token_str == "{"
+
+        while self.tokens:
+
+
+            next_token = self.get_next_token()
+            if next_token.token_str == "}":
+                break
+
+
+            if next_token.token_str == "case":
+                case_num_label = "not_case_{}".format(next(self.even_number_generator))
+
+                case_value = self.get_next_token()
+
+                assert self.get_next_token().token_str == ":"
+                assert self.get_next_token().token_str == "{"
+
+                self.asm_string.append("cmp edi, {}".format(case_value.token_str))
+                self.asm_string.append("jne {}".format(case_num_label))
+
+                self.statement()
+
+                self.asm_string.append("jmp end_switch_label")
+                self.asm_string.append("{}:".format(case_num_label))
+
+                assert self.get_next_token().token_str == "}"
+
+            if next_token.token_str == "default":
+                assert self.get_next_token().token_str == ":"
+                assert self.get_next_token().token_str == "{"
+
+                self.statement()
+
+                assert self.get_next_token().token_str == "}"
+
+        self.asm_string.append("end_switch_label:")
+
 
     def if_statement(self):
         if_statement = If.If(self.asm_string, self.tokens, self.symbol_table)
@@ -102,6 +148,13 @@ class Parser(object):
         assert self.get_next_token().token_str == "}"
 
         if_statement.create_end()
+
+        if self.tokens[0].token_str == "else":
+            if_statement.create_else_start()
+
+            self.statement()
+
+            if_statement.create_else_end()
 
     def for_loop(self):
         loop_counter = self.for_loop_counter
@@ -201,13 +254,11 @@ class Parser(object):
         while token.token_str != ";":
             expression.append(token)
             token = self.get_next_token()
+        self.tokens.appendleft(token)
 
         algorithmic_class = Algorithmic.Algorithmic(self.asm_string, self.symbol_table, expression)
         algorithmic_class.infix_to_postfix()
         algorithmic_class.process_postfix(symbol)
-
-        # self.asm_string.append("mov esi, DWORD[temp_0]")
-        # self.asm_string.append("mov DWORD[{}], esi".format(symbol.name))
 
     def array(self):
         # This is for creating an array
@@ -247,10 +298,7 @@ class Parser(object):
         return new_array
 
     def end(self):
-        # if self.get_next_token().token_str == '.':
-            self.create_file()
-        # else:
-        #     raise ValueError("The 'end.' Token was not the final token called")
+        self.create_file()
 
     def create_file(self):
         self.create_exports()

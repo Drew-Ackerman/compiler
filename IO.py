@@ -20,12 +20,17 @@ class IO(object):
 
 
     def read(self):
+        symbol = None
 
         token = self.get_next_token()
 
         if token.token_type is TokenTypes.VARIABLE:
 
-            symbol = self.symbol_table.lookup(token.token_str)
+            try:
+                symbol = self.symbol_table.lookup(token.token_str)
+            except ValueError:
+                pass
+
             # If theres already a symbol defined
             if symbol:
                 symbol.symbol_type = SymbolTable.SymbolTypes.UNKNOWN
