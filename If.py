@@ -76,6 +76,6 @@ class If(object):
         assert self.get_next_token().token_str == "{"
 
     def create_else_end(self):
-        assert self.get_next_token().token_str == ";"
+       #  assert self.get_next_token().token_str == ";"
         assert self.get_next_token().token_str == "}"
         self.asm_string.append("_endelse_{}:".format(self.even_number_for_labels))

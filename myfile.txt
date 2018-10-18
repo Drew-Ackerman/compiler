@@ -1,33 +1,94 @@
 program basicsExample;
 	begin
 
-    /*
+
     num num1 = 1;
     num num2 = 2;
     num num3 = 3;
 
-    read num4;
-    num num5 = num1 + num2 + num3 + num4 + num1 + num2;
-
+    num num5 = num1 * num2 - num3;
     write num5;
-    */
 
+    write "enter a value for num4";
+    read num4;
+    write num4;
+
+    num x = 2;
+    if x == 2 then {
+        write "x equals 2";
+        if x >= 0 then {
+            write "x is greater than 0";
+        }
+    }
+
+    else{
+        write "x not equal 2";
+    }
+
+
+/*
+
+    num i;
+    num j;
+    num ralph = 3;
+    num start = 0;
+    num num6 = 1;
+    num y = 2;
+
+    for i = start to ralph step num6 do{
+    y = y * 2;
+    }
+    write "y should be 32 ";
+    write y;
+*/
+
+/*
     num bob = 2;
     switch (bob)
     {
         case 1:
         {
-            write "this is 1";
+            write "bob is 1";
         }
         case 2:
         {
-            write "this is 2";
+            write "bob is 2";
         }
         default:
         {
-            write "this is default";
+            write "default case";
         }
     }
     write "this is after the switch";
+/*
+
+
+    /*
+    procedure changeNum1 (num passIn)
+		{
+			write "before was 3";
+			write passIn;
+			write "passIn = 5";
+			passIn = 5;
+			write passIn;
+		}
+	procedure changeNum2 (num *passIn)
+		{
+			write "before was 3";
+			write passIn;
+			write "passIn = 5";
+			passIn = 5;
+			write passIn;
+		}
+
+		bob = 3;
+		changeNum1(bob);
+		write "bob = 3";
+		write bob;
+
+		changeNum2(bob);
+		write "bob = 5";
+		write bob;
+    */
 
 end.

@@ -17,6 +17,8 @@ class Symbol(object):
             return DataTypes.ARRAY
         elif token_type is Scanner.TokenTypes.VARIABLE:
             return DataTypes.VARIABLE
+        elif token_type is Scanner.TokenTypes.PROCEDURE:
+            return DataTypes.PROCEDURE
         else:
             return token_type
 
@@ -55,7 +57,12 @@ class SymbolTable(object):
 
     def setup_default_symbols(self):
         temp_0 = Symbol("temp_0", 0, Scanner.TokenTypes.VARIABLE, SymbolTypes.KNOWN)
+        temp_1 = Symbol("temp_1", 0, Scanner.TokenTypes.VARIABLE, SymbolTypes.KNOWN)
+        temp_2 = Symbol("temp_2", 0, Scanner.TokenTypes.VARIABLE, SymbolTypes.KNOWN)
+
         self.insert(temp_0)
+        self.insert(temp_1)
+        self.insert(temp_2)
 
 class SymbolTypes(enum.Enum):
     UNKNOWN = "unknown"
@@ -66,3 +73,4 @@ class DataTypes(enum.Enum):
     NUM = "num"
     VARIABLE = "variable"
     STRING = "string"
+    PROCEDURE = "procedure"

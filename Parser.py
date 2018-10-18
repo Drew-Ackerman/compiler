@@ -6,6 +6,7 @@ import Algorithmic
 import IO
 import For
 import If
+import Generators
 
 
 def get_generated_num():
@@ -22,12 +23,10 @@ class Parser(object):
         self.asm_file = None
         self.error_file = None
         self.asm_string = []
-        self.number_variable_counter = 0
-        self.initialized_variables = []
         self.end_of_tokens = False
-        self.algorithmic_stack = []
 
         self.for_loop_counter = 0
+        self.generator = Generators.Generators(self.symbol_table)
 
     even_number_generator = get_generated_num()
 
@@ -80,6 +79,8 @@ class Parser(object):
                     self.if_statement()
                 elif next_token.token_str == "switch":
                     self.switch_statement()
+                elif next_token.token_str == "procedure":
+                    self.create_procedure()
 
 
             elif next_token.token_type == TokenTypes.DELIMETER:
@@ -88,6 +89,30 @@ class Parser(object):
 
             elif next_token.token_type == TokenTypes.VARIABLE:
                     self.variable(next_token)
+
+    def create_procedure(self):
+
+        procedure_name_token = self.get_next_token()
+
+        assert self.get_next_token().token_str == "("
+
+        by_reference = False
+        variable_type_token = self.get_next_token()
+        if self.lookahead_token == '*':
+            by_reference = True
+        variable_name_token = self.get_next_token()
+        variable_name_symbol = SymbolTable.Symbol(variable_name_token.token_str, variable_name_token.token_str, TokenTypes.PROCEDURE, SymbolTable.SymbolTypes.UNKNOWN)
+        self.symbol_table.insert(variable_name_symbol)
+
+        assert self.get_next_token().token_str == ")"
+
+        assert self.get_next_token().token_str == "{"
+
+        while self.lookahead_token.token_str != "}":
+            self.statement()
+
+        assert self.get_next_token().token_str == "}"
+        self.asm_string.append("ret")
 
     def switch_statement(self):
         assert self.get_next_token().token_str == "("
@@ -133,7 +158,6 @@ class Parser(object):
 
         self.asm_string.append("end_switch_label:")
 
-
     def if_statement(self):
         if_statement = If.If(self.asm_string, self.tokens, self.symbol_table)
 
@@ -168,6 +192,7 @@ class Parser(object):
         while self.lookahead_token.token_str != "}":
             self.statement()
 
+        assert self.get_next_token().token_str == ";"
         assert self.get_next_token().token_str == "}"
 
         loop_counter = self.for_loop_counter
@@ -256,7 +281,7 @@ class Parser(object):
             token = self.get_next_token()
         self.tokens.appendleft(token)
 
-        algorithmic_class = Algorithmic.Algorithmic(self.asm_string, self.symbol_table, expression)
+        algorithmic_class = Algorithmic.Algorithmic(self.asm_string, self.symbol_table, self.generator, expression)
         algorithmic_class.infix_to_postfix()
         algorithmic_class.process_postfix(symbol)
 

@@ -1,4 +1,3 @@
-
 from Scanner import  TokenTypes
 import collections
 from Scanner import Token
@@ -12,11 +11,13 @@ def label_number_generator():
 
 class Algorithmic(object):
 
-    def __init__(self, asm_string:list, symbol_table, expression:list):
+    def __init__(self, asm_string:list, symbol_table, generator, expression:list):
         self.asm_string = asm_string
         self.symbol_table = symbol_table
+        self.generator = generator
 
-        self.expression = expression
+        self.expression = collections.deque(expression)
+        self.unoptomized = True
 
     label_num_gen = label_number_generator()
 
@@ -74,8 +75,12 @@ class Algorithmic(object):
         if len(self.expression) > 1:
             while len(self.expression) > 1:
                 self._process_postfix(self.expression)
-            if self.expression:
-                self.asm_string.append("mov esi, {}".format(self.expression[0].token_str))
+            if len(self.expression) == 1:
+                last_token = self.expression.pop()
+                if last_token.token_type == TokenTypes.VARIABLE:
+                    self.asm_string.append("mov esi, DWORD[{}]".format(last_token.token_str))
+                elif last_token.token_type == TokenTypes.NUM:
+                    self.asm_string.append("mov esi, {}".format(last_token.token_str))
             self.asm_string.append("mov DWORD[{}], esi".format(variable.name))
         else:
             self.assign_value(variable)
@@ -126,7 +131,6 @@ class Algorithmic(object):
             opl_symbol = self.symbol_table.lookup(opl.token_str)
         except ValueError:
             opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, SymbolTable.SymbolTypes.KNOWN)
-
         try:
             opr_symbol = self.symbol_table.lookup(opr.token_str)
         except ValueError:
@@ -142,111 +146,183 @@ class Algorithmic(object):
         else:
             temporary_asm.append("add esi, {};".format(opr_symbol.value))
 
-        if opl_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN and opr_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN:
-            new_num_value = str(int(opl_symbol.value) + int(opr_symbol.value))
-            new_token = Token(TokenTypes.NUM)
-            new_token.token_str = new_num_value
-            return new_token
-        else:
+        if self.unoptomized:
+            new_token = Token(TokenTypes.VARIABLE)
+            new_token.token_str = "temp_0"
             self.asm_string.extend(temporary_asm)
-            return None
+            self.asm_string.append("mov DWORD[temp_0], esi")
+            self.unoptomize = True
+            return new_token
+
+        else:
+
+            if opl_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN and opr_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN:
+                new_num_value = str(int(opl_symbol.value) + int(opr_symbol.value))
+                new_token = Token(TokenTypes.NUM)
+                new_token.token_str = new_num_value
+                return new_token
+            else:
+                new_token = Token(TokenTypes.VARIABLE)
+                new_token.token_str = "temp_0"
+                self.asm_string.extend(temporary_asm)
+                self.asm_string.append("mov DWORD[temp_0], esi")
+                self.unoptomized = True
+                return new_token
 
     def sub(self, opl, opr):
+        temporary_asm = []
         try:
             opl_symbol = self.symbol_table.lookup(opl.token_str)
         except ValueError:
-            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, None)
-
+            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, SymbolTable.SymbolTypes.KNOWN)
         try:
             opr_symbol = self.symbol_table.lookup(opr.token_str)
         except ValueError:
-            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, None)
+            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, SymbolTable.SymbolTypes.KNOWN)
 
         if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("mov esi, DWORD[{}];".format(opl_symbol.name))
+            temporary_asm.append("mov esi, DWORD[{}];".format(opl_symbol.name))
         else:
-            self.asm_string.append("mov esi, {};".format(opl_symbol.value))
+            temporary_asm.append("mov esi, {};".format(opl_symbol.value))
 
 
         if opr_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("sub esi, DWORD[{}];".format(opr_symbol.name))
+            temporary_asm.append("sub esi, DWORD[{}];".format(opr_symbol.name))
         else:
-            self.asm_string.append("sub esi, {};".format(opr_symbol.value))
+            temporary_asm.append("sub esi, {};".format(opr_symbol.value))
 
-        new_num_value = str(int(opl_symbol.value) - int(opr_symbol.value))
-        new_token = Token(TokenTypes.NUM)
-        new_token.token_str = new_num_value
-        return new_token
+        if self.unoptomized:
+            new_token = Token(TokenTypes.VARIABLE)
+            new_token.token_str = "temp_2"
+            self.asm_string.extend(temporary_asm)
+            self.asm_string.append("mov DWORD[temp_2], esi")
+            self.unoptomize = True
+            return new_token
+
+        else:
+
+            if opl_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN and opr_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN:
+                new_num_value = str(int(opl_symbol.value) - int(opr_symbol.value))
+                new_token = Token(TokenTypes.NUM)
+                new_token.token_str = new_num_value
+                return new_token
+            else:
+                new_token = Token(TokenTypes.VARIABLE)
+                new_token.token_str = "temp_2"
+                self.asm_string.extend(temporary_asm)
+                self.asm_string.append("mov DWORD[temp_2], esi")
+                self.unoptomized = True
+                return new_token
 
     def mult(self, opl, opr):
+        temporary_asm = []
         try:
             opl_symbol = self.symbol_table.lookup(opl.token_str)
         except ValueError:
-            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, None)
-
+            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, SymbolTable.SymbolTypes.KNOWN)
         try:
             opr_symbol = self.symbol_table.lookup(opr.token_str)
         except ValueError:
-            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, None)
+            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, SymbolTable.SymbolTypes.KNOWN)
 
         if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("mov esi, DWORD[{}];".format(opl_symbol.name))
+            temporary_asm.append("mov esi, DWORD[{}];".format(opl_symbol.name))
         else:
-            self.asm_string.append("mov esi, {};".format(opl_symbol.value))
+            temporary_asm.append("mov esi, {};".format(opl_symbol.value))
 
 
         if opr_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("imul esi, DWORD[{}];".format(opr_symbol.name))
+            temporary_asm.append("imul esi, DWORD[{}];".format(opr_symbol.name))
         else:
-            self.asm_string.append("imul esi, {};".format(opr_symbol.value))
+            temporary_asm.append("imul esi, {};".format(opr_symbol.value))
 
-        new_num_value = str(int(opl_symbol.value) * int(opr_symbol.value))
-        new_token = Token(TokenTypes.NUM)
-        new_token.token_str = new_num_value
-        return new_token
+        if self.unoptomized:
+            new_token = Token(TokenTypes.VARIABLE)
+            new_token.token_str = "temp_1"
+            self.asm_string.extend(temporary_asm)
+            self.asm_string.append("mov DWORD[temp_1], esi")
+            self.unoptomize = True
+            return new_token
+
+        else:
+
+            if opl_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN and opr_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN:
+                new_num_value = str(int(opl_symbol.value) * int(opr_symbol.value))
+                new_token = Token(TokenTypes.NUM)
+                new_token.token_str = new_num_value
+                return new_token
+            else:
+                new_token = Token(TokenTypes.NUM)
+                new_token.token_str = "temp_1"
+                self.asm_string.extend(temporary_asm)
+                self.asm_string.append("mov DWORD[temp_1], esi")
+                self.unoptomized = True
+                return new_token
 
     def pow(self, opl, opr):
+        temporary_asm = []
+        new_temp = self.generator.get_temp_variable()
+
+
         try:
             opl_symbol = self.symbol_table.lookup(opl.token_str)
         except ValueError:
-            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, None)
-
+            opl_symbol = SymbolTable.Symbol(None, opl.token_str, None, SymbolTable.SymbolTypes.KNOWN)
         try:
             opr_symbol = self.symbol_table.lookup(opr.token_str)
         except ValueError:
-            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, None)
+            opr_symbol = SymbolTable.Symbol(None, opr.token_str, None, SymbolTable.SymbolTypes.KNOWN)
 
         label_string_num = next(self.label_num_gen)
-        self.asm_string.append("xor edi, edi")	#; clear out the counter
-        self.asm_string.append("inc edi")
+        temporary_asm.append("xor edi, edi")	#; clear out the counter
+        temporary_asm.append("inc edi")
 
         if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("mov esi, DWORD[{}]".format(opl_symbol.name))
+            temporary_asm.append("mov esi, DWORD[{}]".format(opl_symbol.name))
         else:
-            self.asm_string.append("mov esi, {}".format(opl_symbol.value))
+            temporary_asm.append("mov esi, {}".format(opl_symbol.value))
 
-        self.asm_string.append("_exp_top_{}:".format(label_string_num))
+        temporary_asm.append("_exp_top_{}:".format(label_string_num))
 
         if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("cmp edi, DWORD[{}];".format(opl_symbol.name))
+            temporary_asm.append("cmp edi, DWORD[{}];".format(opl_symbol.name))
         else:
-            self.asm_string.append("cmp edi, {};".format(opr_symbol.value))
+            temporary_asm.append("cmp edi, {};".format(opr_symbol.value))
 
-        self.asm_string.append("jz _exp_out_{}".format(label_string_num))       #; jump out if done
+        temporary_asm.append("jz _exp_out_{}".format(label_string_num))       #; jump out if done
 
         if opl_symbol.data_type == SymbolTable.DataTypes.VARIABLE:
-            self.asm_string.append("imul esi, DWORD[{}];".format(opl_symbol.name))
+            temporary_asm.append("imul esi, DWORD[{}];".format(opl_symbol.name))
         else:
-            self.asm_string.append("imul esi, {};".format(opl_symbol.value))
+            temporary_asm.append("imul esi, {};".format(opl_symbol.value))
 
-        self.asm_string.append("inc	edi")
-        self.asm_string.append("jmp	_exp_top_{}".format(label_string_num))      #; result of exponentiation is in eax
-        self.asm_string.append("_exp_out_{}:".format(label_string_num))
+        temporary_asm.append("inc	edi")
+        temporary_asm.append("jmp	_exp_top_{}".format(label_string_num))      #; result of exponentiation is in eax
+        temporary_asm.append("_exp_out_{}:".format(label_string_num))
 
-        new_num_value = str(int(opl.token_str) ^ int(opr.token_str))
-        new_token = Token(TokenTypes.NUM)
-        new_token.token_str = new_num_value
-        return new_token
+        if self.unoptomized:
+            new_token = Token(TokenTypes.VARIABLE)
+            new_token.token_str = "temp_0"
+            self.asm_string.extend(temporary_asm)
+            self.asm_string.append("mov DWORD[temp_0], esi")
+            self.unoptomize = True
+            return new_token
+
+        else:
+
+            if opl_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN and opr_symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN:
+                new_num_value = str(int(opl_symbol.value) ** int(opr_symbol.value))
+                new_token = Token(TokenTypes.NUM)
+                new_token.token_str = new_num_value
+                return new_token
+
+            else:
+                new_token = Token(TokenTypes.NUM)
+                new_token.token_str = "temp_0"
+                self.asm_string.extend(temporary_asm)
+                self.asm_string.append("mov DWORD[temp_0], esi")
+                self.unoptomized = True
+                return new_token
 
     def get_priority(self, token_str):
             if token_str in ["+",  "-"]:
