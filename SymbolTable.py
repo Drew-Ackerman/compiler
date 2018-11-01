@@ -19,6 +19,8 @@ class Symbol(object):
             return DataTypes.VARIABLE
         elif token_type is Scanner.TokenTypes.PROCEDURE:
             return DataTypes.PROCEDURE
+        elif token_type is Scanner.TokenTypes.STRING:
+            return DataTypes.STRING
         else:
             return token_type
 
@@ -27,10 +29,13 @@ class SymbolTable(object):
     def __init__(self):
         self.symbol_table = {}
         self.reserved_symbols = ['begin', 'program', 'end.', 'num', 'write', 'array', 'read', 'for', 'to', 'step', 'do']
-
+        self.scope = ""
         self.setup_default_symbols()
 
     def insert(self, symbol):
+        if self.scope:
+            symbol.name = self.scope + symbol.name
+
         if (symbol.name) in self.reserved_symbols:
             raise ValueError("Symbol: {}, is a reserved keyword.".format(symbol))
 
@@ -42,6 +47,9 @@ class SymbolTable(object):
             return True
 
     def lookup(self, symbol_name) -> Symbol:
+        if self.scope:
+            symbol_name = self.scope + symbol_name
+
         symbol = self.symbol_table.get(symbol_name)
         if symbol:
             return symbol
@@ -53,20 +61,44 @@ class SymbolTable(object):
 
 
     def delete(self, symbol_name):
+        if self.scope:
+            symbol_name = self.scope + symbol_name
         del self.symbol_table[symbol_name]
 
     def setup_default_symbols(self):
         temp_0 = Symbol("temp_0", 0, Scanner.TokenTypes.VARIABLE, SymbolTypes.KNOWN)
         temp_1 = Symbol("temp_1", 0, Scanner.TokenTypes.VARIABLE, SymbolTypes.KNOWN)
         temp_2 = Symbol("temp_2", 0, Scanner.TokenTypes.VARIABLE, SymbolTypes.KNOWN)
+        empty_string = Symbol("empty_string", "\"\"", Scanner.TokenTypes.STRING, SymbolTypes.KNOWN, 128)
 
         self.insert(temp_0)
         self.insert(temp_1)
         self.insert(temp_2)
+        self.insert(empty_string)
+
+    def enter_scope(self, scope_name, scope_type):
+        if scope_type == ScopeTypes.CLASS:
+            scope_name = scope_type.value.format(scope_name)
+        elif scope_type == ScopeTypes.PROCEDURE:
+            scope_name = scope_type.value.format(scope_name)
+
+        self.scope = scope_name + self.scope
+
+    def exit_scope(self, scope_name, scope_type):
+        if scope_type == ScopeTypes.CLASS:
+            scope_name = scope_type.value.format(scope_name)
+        elif scope_type == ScopeTypes.PROCEDURE:
+            scope_name = scope_type.value.format(scope_name)
+
+        self.scope = self.scope.strip(scope_name)
 
 class SymbolTypes(enum.Enum):
     UNKNOWN = "unknown"
     KNOWN = "known"
+
+class ScopeTypes(enum.Enum):
+    CLASS = "class_{}"
+    PROCEDURE = "procedure_{}"
 
 class DataTypes(enum.Enum):
     ARRAY = "array"

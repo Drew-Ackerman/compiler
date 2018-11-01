@@ -7,7 +7,8 @@ import IO
 import For
 import If
 import Generators
-
+import RegisterAllocation
+import StringAlgorithmic
 
 def get_generated_num():
     n = 0
@@ -24,6 +25,7 @@ class Parser(object):
         self.error_file = None
         self.asm_string = []
         self.end_of_tokens = False
+        self.register_allocator = RegisterAllocation.RegisterAllocation()
 
         self.for_loop_counter = 0
         self.generator = Generators.Generators(self.symbol_table)
@@ -81,6 +83,9 @@ class Parser(object):
                     self.switch_statement()
                 elif next_token.token_str == "procedure":
                     self.create_procedure()
+                elif next_token.token_str == "string":
+                    self.create_new_string_variable()
+                    assert self.get_next_token().token_str == ";"
 
 
             elif next_token.token_type == TokenTypes.DELIMETER:
@@ -91,28 +96,78 @@ class Parser(object):
                     self.variable(next_token)
 
     def create_procedure(self):
+        label_number = next(self.even_number_generator)
+        self.asm_string.append("jmp after_proc_{}".format(label_number))
 
         procedure_name_token = self.get_next_token()
+        self.asm_string.append("{}:".format(procedure_name_token.token_str))
 
+        procedure_symbol = SymbolTable.Symbol(procedure_name_token.token_str, None,  SymbolTable.DataTypes.PROCEDURE,SymbolTable.SymbolTypes.KNOWN)
+        self.symbol_table.insert(procedure_symbol)
+
+        # self.symbol_table.enter_scope(procedure_symbol.name, SymbolTable.ScopeTypes.PROCEDURE)
+
+        # Start of Arguments section
+        list_of_arguments = []
         assert self.get_next_token().token_str == "("
 
-        by_reference = False
-        variable_type_token = self.get_next_token()
-        if self.lookahead_token == '*':
-            by_reference = True
-        variable_name_token = self.get_next_token()
-        variable_name_symbol = SymbolTable.Symbol(variable_name_token.token_str, variable_name_token.token_str, TokenTypes.PROCEDURE, SymbolTable.SymbolTypes.UNKNOWN)
-        self.symbol_table.insert(variable_name_symbol)
+        while self.lookahead_token.token_str != ")":
+            list_of_arguments.append(self.get_next_token())
 
+        # Get Rid of Commas
+        list_of_arguments = deque([argument for argument in list_of_arguments if argument.token_str != ","])
+
+        list_of_arguments_for_later = deque(list_of_arguments)
+
+        esp_count = 4
+        while list_of_arguments:
+            get_free_register = self.register_allocator.get_available_register()
+            parameter_type = list_of_arguments.popleft()
+
+            # If its a reference variable
+            if list_of_arguments[0].token_str == "*":
+                list_of_arguments.popleft() # Get rid of * token
+                parameter_name = list_of_arguments.popleft()
+
+                new_parameter_symbol = SymbolTable.Symbol(parameter_name.token_str, get_free_register, TokenTypes.VARIABLE, SymbolTable.SymbolTypes.KNOWN)
+                self.symbol_table.insert(new_parameter_symbol)
+
+            else:
+                parameter_name = list_of_arguments.popleft()
+                new_parameter_symbol = SymbolTable.Symbol(parameter_name.token_str, get_free_register, TokenTypes.NUM,
+                                                          SymbolTable.SymbolTypes.KNOWN)
+                self.symbol_table.insert(new_parameter_symbol)
+
+            self.asm_string.append("mov {}, DWORD[esp+{}];".format(get_free_register, esp_count))
+            self.asm_string.append("mov DWORD[{}], {}".format(parameter_name.token_str.strip("*"), get_free_register))
+            esp_count+=4
+
+        # End Arguments section
         assert self.get_next_token().token_str == ")"
 
+        # Begin Procedure
         assert self.get_next_token().token_str == "{"
 
+        # Procedure Body Statements.
         while self.lookahead_token.token_str != "}":
             self.statement()
 
+        # End Procedure
         assert self.get_next_token().token_str == "}"
+
+        #self.symbol_table.exit_scope(procedure_name_token, SymbolTable.ScopeTypes.PROCEDURE)
+        while list_of_arguments_for_later:
+            parameter_type = list_of_arguments_for_later.popleft()
+            parameter_name = list_of_arguments_for_later.popleft()
+            # If its a reference variable
+            if "*" in parameter_name.token_str:
+                symbol = self.symbol_table.lookup(parameter_name.token_str)
+                self.asm_string.append("mov {}, DWORD[{}];".format(symbol.value, symbol.name.strip("*")))
+
         self.asm_string.append("ret")
+
+        self.asm_string.append("after_proc_{}:".format(label_number))
+        self.register_allocator.release_all_registers()
 
     def switch_statement(self):
         assert self.get_next_token().token_str == "("
@@ -219,10 +274,54 @@ class Parser(object):
             self.array_assignment(symbol, variable_name)
             return
 
+        if symbol.data_type == SymbolTable.DataTypes.PROCEDURE:
+            self.call_procedure(symbol)
+            return
+
+        if symbol.data_type == SymbolTable.DataTypes.STRING:
+            self.append_to_string(variable_name)
+            return
+
         token = self.get_next_token()
 
         if token.token_str == "=":
             self.variable_assignment(symbol)
+
+    def create_new_string_variable(self):
+        StringAlgo = StringAlgorithmic.StringAlgorithmic(self.asm_string, self.symbol_table, self.tokens)
+        StringAlgo.setup()
+        StringAlgo.create_string_variable()
+
+    def append_to_string(self, variable_to_append_to_token):
+        StringAlgo = StringAlgorithmic.StringAlgorithmic(self.asm_string, self.symbol_table, self.tokens)
+        StringAlgo.setup()
+        StringAlgo.assign_to_string(variable_to_append_to_token)
+
+    def call_procedure(self, symbol):
+        # Start of Arguments section
+        list_of_arguments = []
+        assert self.get_next_token().token_str == "("
+
+        while self.lookahead_token.token_str != ")":
+            list_of_arguments.append(self.get_next_token())
+
+        # Get Rid of Commas
+        list_of_arguments = deque([argument for argument in list_of_arguments if argument.token_str != ","])
+
+        for argument in list_of_arguments:
+            self.asm_string.append("push DWORD[{}]".format(argument.token_str))
+
+        self.asm_string.append("call {}".format(symbol.name))
+
+
+
+        list_of_registers = ["eax", "ebx", "ecx", "edx"]
+        registers_counter = 0
+        for argument in list_of_arguments:
+            self.asm_string.append("mov DWORD[{}], {}".format(argument.token_str.strip("*"), list_of_registers[registers_counter]))
+            registers_counter += 1
+
+        self.asm_string.append("add esp, 0x04")
 
     def array_assignment(self, symbol, variable_name):
 
@@ -356,10 +455,14 @@ class Parser(object):
         self.asm_file.write("\n")
 
         for symbol_name, symbol in self.symbol_table.symbol_table.items():
-            if symbol.data_type is SymbolTable.DataTypes.STRING:
+            if symbol.data_type is SymbolTable.DataTypes.STRING and "\"" in symbol.value and symbol.symbol_type is SymbolTable.SymbolTypes.KNOWN:
                 s = "{} db {},0x0d,0x0a,0".format(symbol_name, symbol.value)
                 self.asm_file.write(s)
                 self.asm_file.write("\n")
+
+                #TODO, Change the below to not rely on procedures, maybe None and detect that in create_uniniti?
+                symbol.data_type = SymbolTable.DataTypes.PROCEDURE
+                self.symbol_table.update(symbol_name, symbol)
 
         self.asm_file.write("stringPrinter db \"%s\",0")
         self.asm_file.write("\n")
@@ -373,7 +476,7 @@ class Parser(object):
         self.asm_file.write("section .bss USE32")
         self.asm_file.write("\n")
         for symbol_name, symbol in self.symbol_table.symbol_table.items():
-            if symbol.data_type is not SymbolTable.DataTypes.STRING:
+            if "*" not in symbol_name and symbol.data_type is not SymbolTable.DataTypes.PROCEDURE :
                 s = "{} resd {}".format(symbol_name, symbol.size)
                 self.asm_file.write(s)
                 self.asm_file.write("\n")

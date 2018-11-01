@@ -133,7 +133,7 @@ class Scanner(object):
 
     def assign_types(self):
 
-        regexKW = r'(program|begin|end.|write|read|num|array|for|to|step|do|if|then|case|switch|default|procedure)$'
+        regexKW = r'(program|begin|end.|write|read|num|array|for|to|step|do|if|then|case|switch|default|procedure|string)$'
         regexVariable = r'([a-zA-Z_][a-zA-Z_$0-9]*)'
         regexString = r'(^").*("$)'
         regexRelationalOperators = r'(!=|==|>|<|>=|<=)'

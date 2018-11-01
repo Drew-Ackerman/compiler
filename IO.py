@@ -69,14 +69,26 @@ class IO(object):
                 self._write_array(token_to_write.token_str)
                 return
 
-            if token_to_write.token_type == TokenTypes.VARIABLE:
+            if symbol.data_type is SymbolTable.DataTypes.STRING:
+                self.asm_string.append("push {}".format(symbol.name))
+                self.asm_string.append("push stringPrinter")
+                self.asm_string.append("call _printf")
+                self.asm_string.append("add esp, 0x08")
+                return
+
+            elif token_to_write.token_type == TokenTypes.VARIABLE:
                 self.asm_string.append("push DWORD[{}]".format(token_to_write.token_str))
+                self.asm_string.append("push numberPrinter")
+                self.asm_string.append("call _printf")
+                self.asm_string.append("add esp, 0x08")
+                return
+
             elif token_to_write.token_type == TokenTypes.NUM:
                 self.asm_string.append("push {}".format(token_to_write.token_str))
-            self.asm_string.append("push numberPrinter")
-            self.asm_string.append("call _printf")
-            self.asm_string.append("add esp, 0x08")
-            return
+                self.asm_string.append("push numberPrinter")
+                self.asm_string.append("call _printf")
+                self.asm_string.append("add esp, 0x08")
+                return
 
     def _write_array(self, variable_name):
 
