@@ -59,7 +59,6 @@ class SymbolTable(object):
     def update(self, symbol_name, symbol):
         self.symbol_table.update({symbol_name:symbol})
 
-
     def delete(self, symbol_name):
         if self.scope:
             symbol_name = self.scope + symbol_name

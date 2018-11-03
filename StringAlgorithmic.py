@@ -101,7 +101,6 @@ class StringAlgorithmic(object):
             token = self.get_next_token()
             expression.append(token)
 
-
         while expression:
 
             # Create a symbol for the value that will be copied to the variable. Insert it.
@@ -124,20 +123,16 @@ class StringAlgorithmic(object):
                 self.asm_string.append("mov esi, {}; Source Register".format(string_value_token.token_str))
                 self.copy()
 
-
-            # Now update the Variable Register to hold the string value
-            # if string_value_symbol.data_type is SymbolTable.DataTypes.STRING:
-            #     value_to_append = self.symbol_table.lookup(string_value_symbol.value).value
-            #
-            #
-            # variable_to_append_to_symbol.value += value_to_append
-            # self.symbol_table.update(variable_to_append_to_symbol.name, variable_to_append_to_symbol)
-
             try:
                 if expression[0].token_str == "+":
                     expression.popleft()
+                    self.asm_string.append("dec edi")
+                    self.asm_string.append("dec edi")
+                    self.asm_string.append("dec edi")
+
             except IndexError:
-                pass
+                return
+
 
     def get_next_token(self):
         next_token = self.tokens.popleft()

@@ -390,6 +390,9 @@ class Parser(object):
 
         array_size_deque = deque()
         in_array_statement = True
+
+        algorithmic_expressions = []
+
         if array_variable.token_type is TokenTypes.VARIABLE:
 
             if self.get_next_token().token_str == '[':
@@ -399,11 +402,10 @@ class Parser(object):
                     if array_statement_token.token_type is TokenTypes.NUM:
                         array_size_deque.append(array_statement_token.token_str)
 
-
                     if array_statement_token.token_str == ']':
                         in_array_statement = False
 
-        array = self._create_array(array_variable.token_str, array_size_deque)
+        self._create_array(array_variable.token_str, array_size_deque)
 
     def _create_array(self, array_variable_name, array_size_deque):
         lower_bounds = []
@@ -467,6 +469,8 @@ class Parser(object):
         self.asm_file.write("stringPrinter db \"%s\",0")
         self.asm_file.write("\n")
         self.asm_file.write("numberPrinter db \"%d\",0x0d,0x0a,0")
+        self.asm_file.write("\n")
+        self.asm_file.write("format_float: db \"%f\", 10, 0")
         self.asm_file.write("\n")
         self.asm_file.write("int_format db \"%i\", 0")
         self.asm_file.write("\n")

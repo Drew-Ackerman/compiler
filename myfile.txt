@@ -1,7 +1,7 @@
 program basicsExample;
 	begin
 
-/*
+
     num bob;
 
     procedure changeNum1 (num passIn)
@@ -29,21 +29,19 @@ program basicsExample;
 		changeNum2(bob);
 		write "bob = 5";
 		write bob;
+
+
+/*
+  string first = "James";
+  string last = " Bond";
+  string fullName;
+  fullName = first + " Bond" + "!";
+  string bond = "007";
+  string joke = " 0111";
+  write fullName;
+  string result;
+  result = bond + joke;
+  write result;
 */
-
-
-
-
-    string str1 = "Hi";
-    string str2 = "World";
-    write str1;
-    write str2;
-    str2 = str1;
-    write str2;
-
-    str2 = str1 + str2;
-    write str2;
-
-
 
 end.
